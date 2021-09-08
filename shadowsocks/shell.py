@@ -23,6 +23,7 @@ import json
 import sys
 import getopt
 import logging
+import subprocess
 from shadowsocks.common import to_bytes, to_str, IPNetwork, PortRange
 from shadowsocks import encrypt
 
@@ -128,6 +129,11 @@ def check_config(config, is_local):
 
     encrypt.try_cipher(config['password'], config['method'])
 
+def decrypt_config_file(config_path):
+    shell_command = "gpg -d " + config_path
+    pipe_obj = subprocess.Popen(shell_command, shell=True, stdout=subprocess.PIPE)
+    decrypt_text = pipe_obj.stdout.read().decode('utf8')
+    return decrypt_text
 
 def get_config(is_local):
     global verbose
@@ -163,12 +169,17 @@ def get_config(is_local):
 
         if config_path:
             logging.debug('loading config from %s' % config_path)
-            with open(config_path, 'rb') as f:
-                try:
-                    config = parse_json_in_str(remove_comment(f.read().decode('utf8')))
-                except ValueError as e:
-                    logging.error('found an error in config.json: %s', str(e))
-                    sys.exit(1)
+            #with open(config_path, 'rb') as f:
+            #    try:
+            #        config = parse_json_in_str(remove_comment(f.read().decode('utf8')))
+            #    except ValueError as e:
+            #        logging.error('found an error in config.json: %s', str(e))
+            #        sys.exit(1)
+            try:
+                config = parse_json_in_str(remove_comment(decrypt_config_file(config_path)))
+            except ValueError as e:
+                logging.error('found an error in config.json: %s', str(e))
+                sys.exit(1)
 
 
         v_count = 0
